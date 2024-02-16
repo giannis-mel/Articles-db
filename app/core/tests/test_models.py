@@ -4,7 +4,8 @@ Tests for models.
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 
-# from core import models
+from core.models import Article
+from django.utils import timezone
 
 
 def create_user(email='user@example.com', password='testpass123'):
@@ -53,3 +54,16 @@ class ModelTests(TestCase):
 
         self.assertTrue(user.is_superuser)
         self.assertTrue(user.is_staff)
+
+    def test_create_article_with_user(self):
+        """Test creating an article with a user is successful."""
+        user = create_user()
+        article = Article.objects.create(
+            title="Sample Article",
+            abstract="This is a sample abstract.",
+            publication_date=timezone.now(),
+        )
+        article.authors.add(user)
+
+        self.assertEqual(article.title, "Sample Article")
+        self.assertIn(user, article.authors.all())
