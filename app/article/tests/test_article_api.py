@@ -60,7 +60,6 @@ def create_test_articles(users):
     for i in range(number_of_articles):
         user = random.choice(users)
 
-        # Correct field name for referencing the user
         article = Article.objects.create(
             title=titles[i],
             abstract=abstracts[i],
@@ -68,30 +67,25 @@ def create_test_articles(users):
             createdBy=user
         )
 
+        # Ensure at least one author is added to each article
         for name in author_names:
             author, created = Author.objects.get_or_create(name=name)
-            if random.choice([True, False]):
-                article.authors.add(author)
+            article.authors.add(author)
 
 def create_article(user, **params):
     """
-    Create and return a sample article, associating it with the specified user.
-    The function also handles optional authors and tags passed in params.
-    :param user: User object or user ID who is creating the article
-    :param params: Article parameters like title, abstract, authors, tags, etc.
+    Create and return a sample article.
+    This function requires title, abstract, publication_date, and at least one author.
     """
-    # Extract authors and tags from params if they exist
     authors = params.pop('authors', [])
     tags = params.pop('tags', [])
 
-    # Create the article
     defaults = {
-        'title': 'Sample Article Title',
-        'abstract': 'Sample abstract of the article.',
-        'publication_date': timezone.now().date(),
+        'title': params.get('title'),
+        'abstract': params.get('abstract'),
+        'publication_date': params.get('publication_date'),
         'createdBy': user
     }
-    defaults.update(params)
 
     article = Article.objects.create(**defaults)
 
@@ -106,6 +100,7 @@ def create_article(user, **params):
         article.tags.add(tag)
 
     return article
+
 
 class PublicArticleAPITests(TestCase):
     """Test unauthenticated API requests."""

@@ -10,11 +10,11 @@ from drf_spectacular.utils import (
 from rest_framework import viewsets, mixins
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, PermissionDenied
 from django.contrib.auth import get_user_model
 
 from core.models import Article, Author, Tag
-from article import serializers  # Make sure this points to your article serializers
+from article import serializers
 
 User = get_user_model()
 
@@ -68,17 +68,9 @@ class ArticleViewSet(viewsets.ModelViewSet):
 
         return queryset.distinct().order_by('-publication_date')
 
-    def perform_create(self, serializer):
-        author_names = self.request.data.get('author_names', [])
-        if not isinstance(author_names, list):
-            author_names = [author_names]
+    def update(self, request, *args, **kwargs):
+        article = self.get_object()
+        if article.createdBy != request.user:
+            raise PermissionDenied("You do not have permission to edit this article.")
 
-        existing_authors = []
-        for author_name in author_names:
-            # Create author if not exists
-            author_obj, created = Author.objects.get_or_create(name=author_name)
-            existing_authors.append(author_obj)
-
-        serializer.save()
-        serializer.instance.authors.set(existing_authors)
-        serializer.save(createdBy=self.request.user)
+        return super().update(request, *args, **kwargs)

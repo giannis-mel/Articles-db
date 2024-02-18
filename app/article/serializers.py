@@ -6,7 +6,8 @@ from django.contrib.auth import get_user_model
 from core.models import (
     Article,
     Tag,
-    Author
+    Author,
+    Comment
 )
 
 class AuthorSerializer(serializers.ModelSerializer):
@@ -21,7 +22,7 @@ class TagSerializer(serializers.ModelSerializer):
 
 
 class ArticleSerializer(serializers.ModelSerializer):
-    authors = AuthorSerializer(many=True, read_only=True)
+    authors = AuthorSerializer(many=True, required=True)
     tags = TagSerializer(many=True, required=False)
     created_by = serializers.ReadOnlyField(source='createdBy.name')
 
@@ -40,34 +41,49 @@ class ArticleDetailSerializer(ArticleSerializer):
     def _get_or_create_tags(self, tags, article):
         """Handle getting or creating tags as needed."""
         for tag_name in tags:
-            tag_obj, created = Tag.objects.get_or_create(name=tag_name)
+            tag_obj, _ = Tag.objects.get_or_create(name=tag_name)
             article.tags.add(tag_obj)
 
     def _get_or_create_authors(self, author_names, article):
         """Handle getting or creating authors as needed."""
         for author_name in author_names:
-            author_obj, created = Author.objects.get_or_create(name=author_name)
+            author_obj, _ = Author.objects.get_or_create(name=author_name)
             article.authors.add(author_obj)
 
     def create(self, validated_data):
         tags = validated_data.pop('tags', [])
         author_names = validated_data.pop('authors', [])
-        created_by = self.context['request'].user  # Get the user from the request context
+        created_by = self.context['request'].user
         article = Article.objects.create(**validated_data, createdBy=created_by)
         self._get_or_create_tags(tags, article)
         self._get_or_create_authors(author_names, article)
         return article
 
     def update(self, instance, validated_data):
-        tags = validated_data.pop('tags', None)
-        author_names = validated_data.pop('authors', None)
-        if tags is not None:
+        # Handle tags
+        if 'tags' in validated_data:
+            tags = validated_data.pop('tags')
             instance.tags.clear()
             self._get_or_create_tags(tags, instance)
-        if author_names is not None:
+
+        # Handle authors
+        if 'authors' in validated_data:
+            author_names = validated_data.pop('authors')
             instance.authors.clear()
             self._get_or_create_authors(author_names, instance)
+
+        # Update other fields present in validated_data
         for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+            if hasattr(instance, attr) and (attr not in self.read_only_fields):
+                setattr(instance, attr, value)
+
         instance.save()
         return instance
+
+class CommentSerializer(serializers.ModelSerializer):
+    commentedBy = serializers.ReadOnlyField(source='commentedBy.name')
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'article', 'commentedBy', 'content', 'createdAt']
+        read_only_fields = ['id', 'commentedBy', 'createdAt']
