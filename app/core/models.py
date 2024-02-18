@@ -49,20 +49,30 @@ class User(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = 'email'
 
 
+class Tag(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
+class Author(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Article(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
     title = models.CharField(max_length=255)
     abstract = models.TextField()
     publication_date = models.DateField()
-    authors = models.ManyToManyField(settings.AUTH_USER_MODEL)
-    # tags = models.ManyToManyField(Tag, blank=True)  # Many-to-many relationship to Tag
-
+    authors = models.ManyToManyField(Author)
+    tags = models.ManyToManyField(Tag, blank=True)
+    createdBy = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True)
     def __str__(self):
         return self.title
-
-
-# class Tag(models.Model):
-#     name = models.CharField(max_length=50, unique=True)
-
-#     def __str__(self):
-#         return self.name

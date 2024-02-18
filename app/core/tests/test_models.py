@@ -4,7 +4,7 @@ Tests for models.
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 
-from core.models import Article
+from core.models import Article, Tag
 from django.utils import timezone
 
 
@@ -55,15 +55,19 @@ class ModelTests(TestCase):
         self.assertTrue(user.is_superuser)
         self.assertTrue(user.is_staff)
 
-    def test_create_article_with_user(self):
-        """Test creating an article with a user is successful."""
+    def test_create_article_with_tags(self):
+        """Test creating an article with tags is successful."""
         user = create_user()
+        tag1 = Tag.objects.create(name="Technology")
+        tag2 = Tag.objects.create(name="Science")
+
         article = Article.objects.create(
-            title="Sample Article",
-            abstract="This is a sample abstract.",
+            title="Tech Article",
+            abstract="An article about technology.",
             publication_date=timezone.now(),
         )
-        article.authors.add(user)
+        article.tags.add(tag1, tag2)
 
-        self.assertEqual(article.title, "Sample Article")
-        self.assertIn(user, article.authors.all())
+        self.assertEqual(article.title, "Tech Article")
+        self.assertIn(tag1, article.tags.all())
+        self.assertIn(tag2, article.tags.all())
